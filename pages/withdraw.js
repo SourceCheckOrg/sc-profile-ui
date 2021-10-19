@@ -33,7 +33,7 @@ export default function Profile() {
   const [errorMsg, setErrorMsg] = useState('');
 
   function canWithdraw() {
-    return;
+    return user && user.eth_profile_addr && active;
   }
 
   useEffect(() => {

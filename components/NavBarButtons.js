@@ -99,6 +99,7 @@ export default function NavBarButtons() {
         if (result.error && result.error === 'User is not registered!'); {
           setErrorMsg('User is not registered! Redirecting to Sign Up page ...');
           setTimeout(() => {
+            setLoading(false);
             setErrorMsg('');
             router.push('/sign-up')
           }, 3000);
