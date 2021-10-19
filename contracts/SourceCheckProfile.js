@@ -26,6 +26,25 @@ export default [
 		"type": "constructor"
 	},
 	{
+		"anonymous": false,
+		"inputs": [],
+		"name": "EvtNativeWithdraw",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "tokenAddr",
+				"type": "address"
+			}
+		],
+		"name": "EvtWithdraw",
+		"type": "event"
+	},
+	{
 		"inputs": [],
 		"name": "_owner",
 		"outputs": [

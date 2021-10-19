@@ -1,26 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useWeb3React } from '@web3-react/core'
+import { ethers } from 'ethers';
 import { useAuth } from '../context/auth';
-import { getNativeBalance, getBalance, nativeWithdraw, withdraw } from '../lib/ethereum';
+import { getNativeBalance, getBalance } from '../lib/ethereum';
 import Button from '../components/Button';
 import Layout from '../components/AppLayout';
 import LoaderButton from "../components/LoaderButton";
 import NotificationPanel from '../components/NotificationPanel';
 import Protected from '../components/Protected';
+import SOURCECHECK_PROFILE_ABI from '../contracts/SourceCheckProfile';
 
+// DAI Token data
 const DAI_ADDR = process.env.NEXT_PUBLIC_DAI_ADDR;
 const DAI_DEC = process.env.NEXT_PUBLIC_DAI_DEC;
 
+// USDC Token data
 const USDC_ADDR = process.env.NEXT_PUBLIC_USDC_ADDR;
 const USDC_DEC = process.env.NEXT_PUBLIC_USDC_DEC;
 
 export default function Profile() {
-  const { active, library: provider, activate } = useWeb3React();
-
-  // Data fetching
-  let { user } = useAuth();
+  const { active, library: provider } = useWeb3React();
+  const { user } = useAuth();
   
-  // Publisher state
+  // Token balances
   const [maticBalance, setMaticBalance] = useState(null);
   const [daiBalance, setDaiBalance] = useState(null);
   const [usdcBalance, setUsdcBalance] = useState(null);
@@ -65,24 +67,32 @@ export default function Profile() {
     try {
       setWithdrawingMATIC(true);
       const signer = await provider.getSigner();
-      
-      // Send withdraw native tokens tx
-      const tx = await nativeWithdraw(user.eth_profile_addr, signer);
-      
-      // Return transaction receipt
-      const receipt = await tx.wait();
-      
-      console.log('receipt', receipt);
-      setWithdrawingMATIC(false);
-      if (receipt.status === 1) {
-        const maticBalance = await getNativeBalance(user.eth_profile_addr, signer);
-        setMaticBalance(maticBalance);
+      const profileContract = new ethers.Contract(user.eth_profile_addr, SOURCECHECK_PROFILE_ABI, signer);
+
+      // Create an event filter
+      const filter = profileContract.filters.EvtNativeWithdraw();
+
+      // Event listener
+      const onNativeWithdraw = function (evt) {
+
+        // Unsubscribe to event
+        profileContract.off(filter, onNativeWithdraw);
+
+        // Fetch new balances
+        fetchBalances();
+        
+        // Notify user
+        setWithdrawingMATIC(false);
         setSuccessMsg("Withdraw successful!");
         setTimeout(() => setSuccessMsg(''), 3000);
-      } else {
-        setErrorMsg("Error withdrawing token!")
-        setTimeout(() => setErrorMsg(''), 3000);
       }
+
+      // Subscribe to event
+      profileContract.on(filter, onNativeWithdraw);
+
+      // Send withdraw transaction
+      await profileContract.nativeWithdraw();
+
     } catch (err) {
       setWithdrawingMATIC(false);
       setErrorMsg(`Error withdrawing tokens: ${err.message}`);
@@ -94,53 +104,74 @@ export default function Profile() {
     try {
       setWithdrawingDAI(true);
       const signer = await provider.getSigner();
-      const receipt = await withdrawToken(DAI_ADDR, signer);
-      console.log('receipt', receipt);
-      setWithdrawingDAI(false);
-      if (receipt.status === 1) {
-        const daiBalance = await getBalance(user.eth_profile_addr, DAI_ADDR, DAI_DEC, signer);
-        setDaiBalance(daiBalance);
+      const profileContract = new ethers.Contract(user.eth_profile_addr, SOURCECHECK_PROFILE_ABI, signer);
+      
+      // Create an event filter
+      const filter = profileContract.filters.EvtWithdraw(DAI_ADDR);
+           
+      // Event listener
+      const onWithdraw = function (tokenAddr, evt) {
+
+        // Unsubscribe to event
+        profileContract.off(filter, onWithdraw);
+
+        // Fetch new balances
+        fetchBalances();
+        
+        // Notify user
+        setWithdrawingDAI(false);
         setSuccessMsg("Withdraw successful!");
         setTimeout(() => setSuccessMsg(''), 3000);
-      } else {
-        setErrorMsg("Error withdrawing token!")
-        setTimeout(() => setErrorMsg(''), 3000);
       }
+
+      // Subscribe to event
+      profileContract.on(filter, onWithdraw);
+
+      // Send withdraw transaction
+      await profileContract.withdraw(DAI_ADDR);
+
     } catch (err) {
       setWithdrawingDAI(false);
       setErrorMsg(`Error withdrawing tokens: ${err.message}`);
       setTimeout(() => setErrorMsg(''), 3000);
     }
-  }
-  
+  };
+
   async function withdrawUSDC() {
     try {
-      setWithdrawingUSDC(true)
+      setWithdrawingUSDC(true);
       const signer = await provider.getSigner();
-      const receipt = await withdrawToken(USDC_ADDR, signer);
-      console.log('receipt', receipt);
-      setWithdrawingUSDC(false);
-      if (receipt.status === 1) {
-        const usdcBalance = await getBalance(user.eth_profile_addr, USDC_ADDR, USDC_DEC, signer);
-        setUsdcBalance(usdcBalance);
+      const profileContract = new ethers.Contract(user.eth_profile_addr, SOURCECHECK_PROFILE_ABI, signer);
+      
+      // Create an event filter
+      const filter = profileContract.filters.EvtWithdraw(USDC_ADDR);
+           
+      // Event listener
+      const onWithdraw = function (tokenAddr, evt) {
+
+        // Unsubscribe to event
+        profileContract.off(filter, onWithdraw);
+
+        // Fetch new balances
+        fetchBalances();
+        
+        // Notify user
+        setWithdrawingUSDC(false);
         setSuccessMsg("Withdraw successful!");
         setTimeout(() => setSuccessMsg(''), 3000);
-      } else {
-        setErrorMsg("Error withdrawing token!")
-        setTimeout(() => setErrorMsg(''), 3000);
       }
+
+      // Subscribe to event
+      profileContract.on(filter, onWithdraw);
+
+      // Send withdraw transaction
+      await profileContract.withdraw(USDC_ADDR);
+
     } catch (err) {
       setWithdrawingUSDC(false);
       setErrorMsg(`Error withdrawing tokens: ${err.message}`);
       setTimeout(() => setErrorMsg(''), 3000);
     }
-  }
-
-  async function withdrawToken(tokenAddr, signer) {
-    // Send withdraw tokens tx
-    const tx = await withdraw(user.eth_profile_addr, tokenAddr, signer);
-    // Return transaction receipt
-    return await tx.wait();
   };
 
   return (
@@ -168,7 +199,18 @@ export default function Profile() {
                     <thead className="bg-gray-50">
                       <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <th scope="col" className="px-6 py-2 ">Token</th>
-                        <th scope="col" className="px-6 py-2 ">Balance</th>
+                        <th scope="col" className="px-6 py-2 ">
+                          <div className="flex flex-row items-center">
+                            <div className="mr-2">Balance</div>
+                            <div>
+                              <a className="cursor-pointer" onClick={fetchBalances}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </a>
+                           </div>
+                          </div>
+                        </th>
                         <th scope="col" className="px-2 py-2 text-right">Action</th>
                       </tr>
                     </thead>
