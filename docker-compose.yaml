@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  ui:
+    build: .
+    image: sourcecheck/sc-profile-ui
+    container_name: profile-ui
+    env_file: 
+      - .env.build
+      
+networks:
+  default:
+    external:
+      name: webproxy
