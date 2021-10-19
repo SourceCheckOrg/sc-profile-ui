@@ -4,7 +4,7 @@ services:
   ui:
     build: .
     image: sourcecheck/sc-profile-ui
-    container_name: profile-ui
+    container_name: sc-profile-ui
     env_file: 
       - .env.build
       
