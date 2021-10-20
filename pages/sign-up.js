@@ -15,6 +15,7 @@ export default function SignUp() {
   const { active, account, library: ethers } = useWeb3React();
 
   // Form state
+  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
  
@@ -39,7 +40,7 @@ export default function SignUp() {
     // Fetch nonce (challenge) to be included in signature
     try {
       const res = await fetch(SIGNUP_NONCE_URL, {
-        body: JSON.stringify({ username, email }),
+        body: JSON.stringify({ displayName, username, email }),
         headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       });
@@ -69,7 +70,7 @@ export default function SignUp() {
     // Trigger account creation on backend
     try {
       const res = await fetch(SIGNUP_URL, {
-        body: JSON.stringify({ username, email, eth_addr: account, signature }),
+        body: JSON.stringify({ displayName, username, email, eth_addr: account, signature }),
         headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       });
@@ -119,6 +120,18 @@ export default function SignUp() {
               <form onSubmit={signUp}>
                 <div className="shadow overflow-hidden sm:rounded-md">
                   <div className="px-4 py-5 space-y-3 sm:p-6 bg-white">
+                    <div className="col-span-6 sm:col-span-4">
+                      <label htmlFor="username"className="block text-sm font-medium text-gray-700">Display Name</label>
+                      <input
+                        id="displayName"
+                        type="text"
+                        name="displayName"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        required
+                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                      />
+                    </div>
                     <div className="col-span-6 sm:col-span-4">
                       <label htmlFor="username"className="block text-sm font-medium text-gray-700">Username</label>
                       <input
