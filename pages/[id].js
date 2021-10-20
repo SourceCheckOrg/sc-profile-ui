@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from "next/router";
-import JsonModal from '../components/JsonModal';
 import PuffLoader from "react-spinners/PuffLoader";
+import {CopyToClipboard} from 'react-copy-to-clipboard';
+import JsonModal from '../components/JsonModal';
+import NotificationPanel from '../components/NotificationPanel';
 
 const API_HOST = process.env.NEXT_PUBLIC_API_HOST;
 const PROFILE_PATH = process.env.NEXT_PUBLIC_PROFILE_PATH;
@@ -39,6 +41,7 @@ export default function VerifiedProfile() {
   const [profileFound, setProfileFound] = useState(false);
   const [showingTwitter, setShowingTwitter] = useState(false);
   const [showingDomain, setShowingDomain] = useState(false);
+  const [successMsg, setSuccessMsg] = useState(null);
 
   async function fetchProfile() {
     try {
@@ -81,6 +84,11 @@ export default function VerifiedProfile() {
     setShowingDomain(!showingDomain);
   }
 
+  function onMessageCopied() {
+    setSuccessMsg('Address copied to clipboard!')
+    setTimeout(() => setSuccessMsg(null), 3000);
+  }
+
   if (loading) {
     return (
       <div className="flex h-screen justify-center items-center">
@@ -113,6 +121,7 @@ export default function VerifiedProfile() {
 
   return (
     <>
+      <NotificationPanel show={!!successMsg} bgColor="bg-green-400" message={successMsg} />
       <JsonModal show={showingTwitter} title="Twitter Verification" json={twitterCred} onCancel={toggleTwitter}> 
         <div className="h-14 bg-gray-100 p-2">
           <span className="mr-4">Handle:</span>
@@ -160,8 +169,22 @@ export default function VerifiedProfile() {
               </tbody>
             </table>
           </div>
-          <div className="bg-gray-50 text-center pt-2">
-            <span># Profile Addr: {shortenAddr(profileAddr)}</span>
+          <div className="flex flex-row space-x-3 justify-center items-center bg-gray-50 text-center pt-2">
+            <div>
+              <svg xmlns="http://www.w3.org/2000/svg" className="inline-block h-5 w-5 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+              </svg>
+            </div>
+            <div className="mt-1">
+              <span>Profile Addr: {shortenAddr(profileAddr)}</span>
+            </div>
+            <div>
+              <CopyToClipboard text={profileAddr} onCopy={onMessageCopied}>
+                <svg xmlns="http://www.w3.org/2000/svg" className="inline-block h-5 w-5 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </CopyToClipboard>
+            </div>
           </div>
           <div className={`flex flex-row space-x-3 justify-center items-center ${!twitterHandle ? 'hidden' : ''} bg-gray-50 text-center pt-2`}>
             <div>

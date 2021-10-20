@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useWeb3React } from '@web3-react/core'
 import { ethers } from 'ethers';
+import {CopyToClipboard} from 'react-copy-to-clipboard';
 import { useAuth } from '../context/auth';
 import { getNativeBalance, getBalance } from '../lib/ethereum';
 import Button from '../components/Button';
@@ -57,6 +58,8 @@ export default function Profile() {
       setMaticBalance(maticBalance);
       setDaiBalance(daiBalance);
       setUsdcBalance(usdcBalance);
+      setSuccessMsg('Balances refreshed!');
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       setErrorMsg(`Unable to fetch balances! - ${err.message}`);
       setTimeout(() => setErrorMsg(''), 3000);
@@ -174,6 +177,11 @@ export default function Profile() {
     }
   };
 
+  function onMessageCopied() {
+    setSuccessMsg('Address copied to clipboard!')
+    setTimeout(() => setSuccessMsg(null), 3000);
+  }
+
   return (
     <>
       <NotificationPanel show={!!successMsg} message={successMsg} bgColor="bg-green-400" />
@@ -185,16 +193,25 @@ export default function Profile() {
               <div className="shadow sm:rounded-md sm:overflow-hidden mt-6">
                 <div className="px-4 py-5 bg-white space-y-5 sm:p-6">
                   <h1 className="text-2xl font-semibold text-gray-900">Withdraw Page</h1>
-                  <div className={`${user && user.eth_profile_addr ? '' : 'hidden'} col-span-6 sm:col-span-4`}>
+                  { user && user.eth_profile_addr ? (
+                    <div className="col-span-6 sm:col-span-4">
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700">Verified Profile Contract Address</label>
-                    <input 
-                      type="text" 
-                      name="profileAddr" 
-                      value={user && user.eth_profile_addr ? user.eth_profile_addr : ''}
-                      disabled
-                      className="mt-1 text-gray-500 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-md border-gray-300 rounded-md" 
-                    />
+                    <div className="flex flex-row space-x-3 items-center bg-gray-50 p-2 border rounded-md">
+                      <div className="flex-grow">
+                        <a className="text-indigo-500 hover:text-indigo-700" href={`/${user.eth_profile_addr}`} target="_blank">{user.eth_profile_addr}</a>
+                      </div>
+                      <div className="flex-grow-0">
+                        <CopyToClipboard text={user.eth_profile_addr} onCopy={onMessageCopied}>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="inline-block h-6 w-6 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </CopyToClipboard>
+                      </div>
+                    </div>
                   </div>
+                  ) : (
+                    <></>
+                  )}
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -204,7 +221,7 @@ export default function Profile() {
                             <div className="mr-2">Balance</div>
                             <div>
                               <a className="cursor-pointer" onClick={fetchBalances}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                               </a>
