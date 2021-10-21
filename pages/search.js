@@ -4,6 +4,7 @@ import PuffLoader from "react-spinners/PuffLoader";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import Button from '../components/Button';
 import JsonModal from '../components/JsonModal';
+import NavBar from '../components/NavBar';
 import NotificationPanel from '../components/NotificationPanel';
 import QrCodeModal from '../components/QrCodeModal';
 
@@ -25,19 +26,10 @@ function domainLink(domainName) {
   return <a className="text-indigo-500 hover:text-indigo-700" target="_blank" href={`https://${domainName}`}>{domainName}</a>
 }
 
-export default function VerifiedProfile({query}) {
-  const router = useRouter();
-  const profileId = router.query.id;
+export default function Search(props) {
+  console.log('props', props)
+  const { username, displayName, profileAddr, twitterHandle, twitterCred, domainName, domainCred } = props;
 
-  // Profile State
-  const [profileAddr, setProfileAddr] = useState();
-  const [displayName, setDisplayName] = useState();
-  const [username, setUsername] = useState();
-  const [twitterHandle, setTwitterHandle] = useState();
-  const [twitterCred, setTwitterCred] = useState();
-  const [domainName, setDomainName] = useState();
-  const [domainCred, setDomainCred] = useState();
-  
   // UI State
   const [loading, setLoading] = useState(true);
   const [profileFound, setProfileFound] = useState(false);
@@ -45,39 +37,6 @@ export default function VerifiedProfile({query}) {
   const [showingDomain, setShowingDomain] = useState(false);
   const [showingPaymentAddr, setShowingPaymentAddr] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
-
-  async function fetchProfile() {
-    try {
-      const url = PROFILE_URL + `?eth_profile_addr=${profileId}`;
-      const response = await fetch(url, {
-        headers: { 'Content-Type': 'application/json' },
-        method: 'GET',
-      });
-      const profile = await response.json();
-      if (profile.error) {
-        setProfileFound(false);
-        return;
-      }
-      setDisplayName(profile.displayName);
-      setProfileAddr(profile.profileAddr);
-      setUsername(profile.username);
-      setTwitterHandle(profile.twitterHandle);
-      setTwitterCred(profile.twitterCred);
-      setDomainName(profile.domainName);
-      setDomainCred(profile.domainCred);
-      setProfileFound(true);
-      setLoading(false);
-    } catch (err) {
-      setLoading(false);
-      setProfileFound(false);
-    }
-  }
-
-  useEffect(() => {
-    if (profileId) {
-      fetchProfile(profileId);
-    }
-  },[profileId])
 
   function toggleTwitter() {
     setShowingTwitter(!showingTwitter);
@@ -92,15 +51,7 @@ export default function VerifiedProfile({query}) {
     setTimeout(() => setSuccessMsg(null), 3000);
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-screen justify-center items-center">
-        <PuffLoader color="blue" loading={true} size={200} />
-      </div>
-    );
-  }
-  
-  if (!profileFound) {
+  if (!username) {
     return (
       <main >
         <div className="rounded-lg flex-1 flex-column items-center max-w-2xl mx-auto mt-24 p-6 overflow-y-auto bg-white" tabIndex="0">
@@ -111,10 +62,10 @@ export default function VerifiedProfile({query}) {
             </svg>
           </span>
           </div>
-          <div className="bg-gray-50 text-red-500 text-center p-2 text-3xl mt-3">
+          <div className="bg-gray-50 text-red-500 text-center p-2 pt-10 text-3xl mt-3">
             <span>Profile Not Found</span>
           </div>
-          <div className="bg-gray-50 text-red-400 text-center text-2xl">
+          <div className="bg-gray-50 text-red-400 text-center text-2xl pb-10">
             <span>Please check the URL!</span>
           </div>
         </div>
@@ -227,4 +178,40 @@ export default function VerifiedProfile({query}) {
       </main>
     </>
   )
+}
+
+export async function getServerSideProps(context) {
+  try {
+    const parsedUrl = context.req.url.split('?')[1];
+    const urlParams = new URLSearchParams(parsedUrl);
+    const username = urlParams.get('username');
+    
+    if (!username) {
+      return { props: {} };
+    }
+   
+    // Fetch profile from server
+    const url = PROFILE_URL + `?username=${username}`;
+    const response = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'GET',
+    });
+    const profile = await response.json();
+    
+    // Profile not found
+    if (profile.error) {
+      return { props: {} };
+    }
+    
+    // Set profile data as props
+    const { displayName, profileAddr, twitterHandle, twitterCred, domainName, domainCred} = profile;
+    return {
+      props: {
+        displayName, profileAddr, username, twitterHandle, twitterCred, domainName, domainCred
+      }
+    }
+  } catch (err) {
+    console.log('err',err);
+    return { props: {} };
+  }
 }

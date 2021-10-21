@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useWeb3React } from '@web3-react/core'
 import { ethers } from "ethers";
+import PulseLoader from 'react-spinners/PulseLoader';
 import Link from 'next/link';
 import useSWR from 'swr'
 import {CopyToClipboard} from 'react-copy-to-clipboard';
@@ -8,6 +9,7 @@ import { useAuth } from '../context/auth';
 import api from '../lib/api';
 import { injected } from '../lib/connectors';
 import JsonModal from '../components/JsonModal';
+import Modal from '../components/Modal';
 import Button from '../components/Button';
 import Layout from '../components/AppLayout';
 import LoaderButton from "../components/LoaderButton";
@@ -31,17 +33,26 @@ export default function Profile() {
   user = user ? user : {};
   const { data: twitter, error: fetchTwitterError } = useSWR(isReady ? TWITTER_PATH : null);
   const { data: domain, error: fetchDomainError } = useSWR(isReady ? DOMAIN_PATH : null);
+
+  // Profile State
+  const [displayName, setDisplayName] = useState('');
   
   // UI state
+  const [saving, setSaving] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [showingDelete, setShowingDelete] = useState(false);
   const [showingTwitter, setShowingTwitter] = useState(false);
   const [showingDomain, setShowingDomain] = useState(false);
 
   useEffect(() => {
     activate(injected);
   },[])
+
+  useEffect(() => {
+    setDisplayName(user.displayName);
+  }, [user]);
 
   function getTwitterCredential() {
     if (!(twitter && twitter.credential)) {
@@ -113,9 +124,35 @@ export default function Profile() {
       setTimeout(() => setErrorMsg(''), 2000)
     }
   }
+  
+  async function onSubmit (e) {
+    try {
+      e.preventDefault()
+      setSaving(true);
+      const method = 'POST';
+      const url = UPDATE_USER_PATH;
+      const data = { displayName };
+      await api.request({ method, url, data });
+      setSaving(false);
+      setSuccessMsg('Profile saved successfully!');
+      setTimeout(() => setSuccessMsg(''), 2000)
+    } catch (err) {
+      setSaving(false);
+      setErrorMsg(`Error saving profile: ${err.message}`);
+      setTimeout(() => setErrorMsg(''), 2000)
+    }
+  }
 
   return (
     <>
+      <Modal 
+        show={showingDelete} 
+        title="Delete Profile" 
+        message="This feature is currently under development. Please send your request to admin@sourcecheck.org" 
+        confirmLabel="OK" 
+        onCancel={() => setShowingDelete(false)} 
+        onConfirm={() => setShowingDelete(false)} 
+      />
       <JsonModal show={showingTwitter} title="Twitter Verification" json={getTwitterCredential()} onCancel={toggleTwitter}> 
         <div className="h-14 bg-gray-100 p-2">
           <span className="mr-4">Handle:</span>
@@ -147,9 +184,18 @@ export default function Profile() {
           <main className="flex-1 overflow-y-auto focus:outline-none py-6" tabIndex="0">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8 mt-5 md:mt-0 md:col-span-2">
               <div className="shadow sm:rounded-md sm:overflow-hidden">
-                <form>
+                <form onSubmit={onSubmit}>
                   <div className="px-4 py-5 bg-white space-y-5 sm:p-6">
-                    <h1 className="text-2xl font-semibold text-gray-900">User</h1>
+                    <h1 className="text-2xl font-semibold text-gray-900">User</h1><div className="col-span-6 sm:col-span-4">
+                      <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">Display Name</label>
+                      <input 
+                        type="text" 
+                        name="displayName" 
+                        value={displayName}
+                        onChange={e => setDisplayName(e.target.value)}
+                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-md border-gray-300 rounded-md bg-white" 
+                      />
+                    </div>                   
                     <div className="col-span-6 sm:col-span-4">
                       <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
                       <input 
@@ -171,6 +217,21 @@ export default function Profile() {
                       />
                     </div>
                   </div>
+                  <div className="px-4 py-3 bg-gray-50 text-right sm:px-6">
+                  <button type="button" onClick={() => setShowingDelete(true)} className="h-10 mr-4 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Delete Profile
+                  </button>
+                  { saving ? (
+                    <div className="inline-block text-center py-2 px-2 border border-transparent shadow-sm rounded-md h-10 w-20 bg-indigo-600 hover:bg-indigo-700">
+                      <PulseLoader color="white" loading={saving} size={9} /> 
+                    </div>
+                  ) : (
+                    <button type="submit" className="h-10 w-20 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                      Save
+                    </button>
+                  )}
+                  </div>
+
                 </form>
               </div>
               <div className="shadow sm:rounded-md sm:overflow-hidden mt-6">
